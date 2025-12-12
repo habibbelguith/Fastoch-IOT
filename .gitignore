@@ -1,0 +1,105 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Model Files (Large - should not be in git)
+*.h5
+*.hdf5
+*.weights
+*.pb
+*.onnx
+*.pth
+*.pt
+*.ckpt
+
+# Data Files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Large datasets
+*.csv
+*.parquet
+*.feather
+
+# Output files
+output/
+uploads/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+!README.md
+!LICENSE
+!*.md
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Specific large files/directories
+Deep-Learning/Licence_plate_detection/Attachments/
+Deep-Learning/Licence_plate_detection/*.weights
+Deep-Learning/Licence_Plate_Recognition/*.h5
+Deep-Learning/Main-Scripts/*.h5
+Deep-Learning/output/
+Deep-Learning/uploads/
+Deep-Learning/__pycache__/
+
+# Keep test images directory structure but ignore large files
+!Deep-Learning/Licence_Plate_Recognition/LP_extraction_test/
+Deep-Learning/Licence_Plate_Recognition/LP_extraction_test/*.jpg
+Deep-Learning/Licence_Plate_Recognition/LP_extraction_test/*.png
+
+# Compiled files
+*.pyc
+*.pyo
+*.pyd
