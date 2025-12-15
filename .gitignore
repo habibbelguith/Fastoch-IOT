@@ -35,9 +35,7 @@ ENV/
 *~
 
 # Model Files (Large - should not be in git)
-*.h5
 *.hdf5
-*.weights
 *.pb
 *.onnx
 *.pth
@@ -46,7 +44,6 @@ ENV/
 
 # Data Files
 *.zip
-*.tar.gz
 *.rar
 *.7z
 
