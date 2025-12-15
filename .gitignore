@@ -88,8 +88,6 @@ logs/
 # Specific large files/directories
 Deep-Learning/Licence_plate_detection/Attachments/
 Deep-Learning/Licence_plate_detection/*.weights
-Deep-Learning/Licence_Plate_Recognition/*.h5
-Deep-Learning/Main-Scripts/*.h5
 Deep-Learning/output/
 Deep-Learning/uploads/
 Deep-Learning/__pycache__/
