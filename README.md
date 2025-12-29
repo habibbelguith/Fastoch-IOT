@@ -40,6 +40,8 @@ pip install -r requirements.txt
 - OpenCV (for image processing)
 - NumPy, Matplotlib (for data handling)
 - Flask, Flask-CORS (for API server)
+- python-dotenv (for environment variables)
+- requests (for OpenAI API calls)
 
 ### Step 2: Download YOLO Weights File ⚠️ **REQUIRED**
 
@@ -49,13 +51,30 @@ The YOLO weights file is required for license plate detection but is not include
 2. **Extract** the ZIP file
 3. **Copy** `lapi.weights` to: `Deep-Learning/Licence_plate_detection/lapi.weights`
 
-### Step 3: Verify Setup
+### Step 3: Configure OpenAI API Key ⚠️ **REQUIRED FOR API**
+
+The API uses OpenAI GPT-4 Vision to extract text from license plates.
+
+1. **Get your API key:** https://platform.openai.com/api-keys
+2. **Create `.env` file** in `Deep-Learning/` directory:
+   ```bash
+   cd Deep-Learning
+   cp env.example .env
+   ```
+3. **Edit `.env`** and add your API key:
+   ```
+   OPENAI_API_KEY=your_api_key_here
+   ```
+
+### Step 4: Verify Setup
 
 ```bash
+# Verify required files
 python check_setup.py
-```
 
-This will verify all required files are present.
+# Verify OpenAI configuration
+python check_openai_config.py
+```
 
 ---
 
@@ -87,9 +106,12 @@ Deep-Learning/
 │   └── LP_extraction_test/           # Test images
 ├── output/                            # Results saved here
 ├── uploads/                           # API uploads (auto-cleaned)
-├── api_server.py                      # Flask API server
+├── api_server.py                      # Flask API server with OpenAI
 ├── test_inference.py                  # Test script
-└── check_setup.py                     # Setup verification
+├── check_setup.py                     # Setup verification
+├── check_openai_config.py            # OpenAI config verification
+├── env.example                        # Environment variables template
+└── .env                               # Your API keys (create from env.example)
 ```
 
 ---
@@ -149,8 +171,7 @@ Server starts on: `http://localhost:5000`
 |--------|----------|-------------|
 | GET | `/health` | Health check |
 | GET | `/info` | API information |
-| POST | `/recognize` | Recognize license plate |
-| GET | `/result_image/<filename>` | Get result image |
+| POST | `/recognize` | Detect license plate and extract text using OpenAI |
 
 ---
 
@@ -165,24 +186,32 @@ Server starts on: `http://localhost:5000`
    - Name: `image`
    - Type: **File** (not Text)
    - Value: Select your image file
-5. **Optional:** Add `return_image` key with value `"true"` to get image directly
 
 #### Expected Response
 
 ```json
 {
   "success": true,
-  "message": "License plate recognized successfully",
-  "result_image": "/result_image/result_your_image.jpg",
-  "uploaded_file": "your_image.jpg"
+  "plate_text": "1234 TUN 56",
+  "model": "gpt-4o",
+  "usage": {
+    "prompt_tokens": 1000,
+    "completion_tokens": 10,
+    "total_tokens": 1010
+  }
 }
 ```
 
-#### View Result Image
+#### Extracted Image
 
-Open in browser or GET request:
+The extracted license plate image is automatically saved to:
 ```
-http://localhost:5000/result_image/result_your_image.jpg
+output/{input_filename}_Licence_Plate_extracted.jpg
+```
+
+For example, if you upload `48.jpg`, the extracted plate will be saved as:
+```
+output/48_Licence_Plate_extracted.jpg
 ```
 
 ---
@@ -212,20 +241,19 @@ curl -X POST \
   | python -m json.tool
 ```
 
-#### Get Result Image Directly
+#### Example Response
 
-```bash
-curl -X POST \
-  http://localhost:5000/recognize \
-  -F "image=@Licence_Plate_Recognition/LP_extraction_test/48.jpg" \
-  -F "return_image=true" \
-  --output result.jpg
-```
-
-#### Download Result Image
-
-```bash
-curl http://localhost:5000/result_image/result_48.jpg --output result.jpg
+```json
+{
+  "success": true,
+  "plate_text": "1234 TUN 56",
+  "model": "gpt-4o",
+  "usage": {
+    "prompt_tokens": 1000,
+    "completion_tokens": 10,
+    "total_tokens": 1010
+  }
+}
 ```
 
 #### Windows PowerShell
@@ -262,7 +290,9 @@ curl -X POST http://localhost:5000/recognize -F "image=@Licence_Plate_Recognitio
 4. **API Server** (`api_server.py`)
    - RESTful API for HTTP requests
    - Handles image uploads
-   - Returns JSON or image responses
+   - Detects license plates using YOLOv3
+   - Extracts text using OpenAI GPT-4 Vision
+   - Returns JSON with extracted text and usage statistics
 
 ---
 
@@ -326,6 +356,52 @@ pip install -r requirements.txt
 - These have been fixed in the updated code
 - Make sure you're using the latest version of scripts
 - Check that all dependencies are up to date
+
+#### 8. OpenAI API Issues
+
+**"OPENAI_API_KEY not configured"**
+
+**Solution:**
+```bash
+# Create .env file
+cd Deep-Learning
+cp env.example .env
+
+# Edit .env and add your API key
+# OPENAI_API_KEY=your_api_key_here
+
+# Verify configuration
+python check_openai_config.py
+```
+
+**"OpenAI API error: 401"**
+
+**Solution:**
+- Invalid or expired API key
+- Get a new key from: https://platform.openai.com/api-keys
+- Update your `.env` file
+
+**"OpenAI API error: 403"**
+
+**Solution:**
+- Account has no credits
+- API key doesn't have access to the model
+- Check your OpenAI account billing and permissions
+
+**"OpenAI API error: 429"**
+
+**Solution:**
+- Rate limit exceeded
+- Wait a few minutes and try again
+- Check your OpenAI usage limits
+
+**"Failed to extract text from license plate"**
+
+**Solution:**
+- Verify API key is correct: `python check_openai_config.py`
+- Check your internet connection
+- Ensure you have OpenAI API credits
+- Try a different image with a clearer license plate
 
 ---
 
