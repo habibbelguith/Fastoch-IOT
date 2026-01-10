@@ -192,8 +192,10 @@ Server starts on: `http://localhost:5000`
 ```json
 {
   "success": true,
-  "plate_text": "1234 TUN 56",
-  "model": "gpt-4o",
+  "left_number": "1234",
+  "middle_text": "تونس",
+  "right_number": "56",
+  "model": "gpt-4.1",
   "usage": {
     "prompt_tokens": 1000,
     "completion_tokens": 10,
@@ -201,6 +203,12 @@ Server starts on: `http://localhost:5000`
   }
 }
 ```
+
+**Response Fields:**
+- `left_number`: Numeric value on the left side of the plate
+- `middle_text`: Middle text in Arabic as written ("تونس")
+- `right_number`: Numeric value on the right side of the plate
+- If any part cannot be read, it will be set to `"UNREADABLE"`
 
 #### Extracted Image
 
@@ -246,8 +254,10 @@ curl -X POST \
 ```json
 {
   "success": true,
-  "plate_text": "1234 TUN 56",
-  "model": "gpt-4o",
+  "left_number": "1234",
+  "middle_text": "تونس",
+  "right_number": "56",
+  "model": "gpt-4.1",
   "usage": {
     "prompt_tokens": 1000,
     "completion_tokens": 10,
