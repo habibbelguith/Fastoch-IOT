@@ -13,6 +13,8 @@ from werkzeug.utils import secure_filename
 import traceback
 import base64
 import requests
+import json
+import re
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -68,13 +70,14 @@ def encode_image_to_base64(image_path):
 
 def extract_text_with_llm(image_path):
     """
-    Extract text from license plate image using OpenAI GPT-4 Vision API
+    Extract text from Tunisian license plate image using OpenAI GPT-4 Vision API
     
     Args:
         image_path: Path to the license plate image
         
     Returns:
-        tuple: (extracted_text, model_used, usage_info) or (None, None, None) on error
+        tuple: (plate_data_dict, model_used, usage_info) or (None, None, None) on error
+        plate_data_dict contains: left_number, middle_text, right_number
     """
     if not OPENAI_API_KEY:
         return None, None, {
@@ -101,6 +104,40 @@ def extract_text_with_llm(image_path):
             'Content-Type': 'application/json'
         }
         
+        # Prompt for Tunisian license plates
+        prompt_text = """Analyze the image and extract the Tunisian license plate information.
+A Tunisian license plate is composed of three distinct parts:
+
+Right part: a numeric value
+
+Middle part: the Arabic word "تونس"
+
+Left part: a numeric value
+
+Your task is to:
+
+Detect and read each part separately.
+
+Keep the Arabic text in its original form (do NOT transliterate). The middle_text must be in Arabic as written: "تونس".
+
+Return the result as three variables:
+
+left_number
+
+middle_text (must be in Arabic: "تونس")
+
+right_number
+
+If any part cannot be read clearly, set its value to "UNREADABLE".
+
+Output format (JSON only, no extra text):
+
+{
+  "left_number": "...",
+  "middle_text": "...",
+  "right_number": "..."
+}"""
+        
         payload = {
             'model': OPENAI_MODEL,
             'messages': [
@@ -109,7 +146,7 @@ def extract_text_with_llm(image_path):
                     'content': [
                         {
                             'type': 'text',
-                            'text': 'Extract the license plate text from this image. Return only the license plate text, nothing else. If the text is in Arabic, transliterate it to Latin characters. If you cannot read the text clearly, return "UNREADABLE".'
+                            'text': prompt_text
                         },
                         {
                             'type': 'image_url',
@@ -120,7 +157,8 @@ def extract_text_with_llm(image_path):
                     ]
                 }
             ],
-            'max_tokens': 50
+            'max_tokens': 150,
+            'response_format': {'type': 'json_object'}
         }
         
         # Make API request
@@ -134,10 +172,47 @@ def extract_text_with_llm(image_path):
         # Check response
         if response.status_code == 200:
             result = response.json()
-            extracted_text = result['choices'][0]['message']['content'].strip()
+            response_content = result['choices'][0]['message']['content'].strip()
             usage_info = result.get('usage', {})
             
-            return extracted_text, OPENAI_MODEL, usage_info
+            # Parse JSON response
+            try:
+                # Try to parse JSON directly
+                plate_data = json.loads(response_content)
+                
+                # Validate that we have the required fields
+                required_fields = ['left_number', 'middle_text', 'right_number']
+                if all(field in plate_data for field in required_fields):
+                    return plate_data, OPENAI_MODEL, usage_info
+                else:
+                    # Missing fields, set defaults
+                    plate_data = {
+                        'left_number': plate_data.get('left_number', 'UNREADABLE'),
+                        'middle_text': plate_data.get('middle_text', 'UNREADABLE'),
+                        'right_number': plate_data.get('right_number', 'UNREADABLE')
+                    }
+                    return plate_data, OPENAI_MODEL, usage_info
+                    
+            except json.JSONDecodeError:
+                # Try to extract JSON from text if it's embedded
+                json_match = re.search(r'\{[^{}]*\}', response_content)
+                if json_match:
+                    try:
+                        plate_data = json.loads(json_match.group())
+                        # Validate fields
+                        plate_data = {
+                            'left_number': plate_data.get('left_number', 'UNREADABLE'),
+                            'middle_text': plate_data.get('middle_text', 'UNREADABLE'),
+                            'right_number': plate_data.get('right_number', 'UNREADABLE')
+                        }
+                        return plate_data, OPENAI_MODEL, usage_info
+                    except json.JSONDecodeError:
+                        pass
+                
+                # If JSON parsing fails, return error
+                error_msg = f"Failed to parse JSON response from LLM: {response_content}"
+                print(error_msg)
+                return None, None, {'error': error_msg, 'raw_response': response_content}
         else:
             error_msg = f"OpenAI API error: {response.status_code}"
             try:
@@ -184,7 +259,9 @@ def recognize_license_plate():
     - JSON with recognition results:
       {
         "success": true,
-        "plate_text": "extracted text",
+        "left_number": "1234",
+        "middle_text": "تونس",
+        "right_number": "56",
         "model": "gpt-4.1",
         "usage": {...}
       }
@@ -258,9 +335,9 @@ def recognize_license_plate():
         print(f"Saved extracted plate to: {extracted_path}")
         
         # Extract text using OpenAI
-        plate_text, model_used, usage_info = extract_text_with_llm(extracted_path)
+        plate_data, model_used, usage_info = extract_text_with_llm(extracted_path)
         
-        if plate_text is None:
+        if plate_data is None:
             # Clean up uploaded file
             if os.path.exists(image_path):
                 os.remove(image_path)
@@ -275,10 +352,12 @@ def recognize_license_plate():
         if os.path.exists(image_path):
             os.remove(image_path)
         
-        # Return response
+        # Return response with structured plate data
         response_data = {
             'success': True,
-            'plate_text': plate_text,
+            'left_number': plate_data.get('left_number', 'UNREADABLE'),
+            'middle_text': plate_data.get('middle_text', 'UNREADABLE'),
+            'right_number': plate_data.get('right_number', 'UNREADABLE'),
             'model': model_used,
             'usage': usage_info
         }
@@ -318,7 +397,9 @@ def api_info():
                 'example': 'curl -X POST -F "image=@vehicle.jpg" http://localhost:5000/recognize',
                 'response': {
                     'success': 'boolean',
-                    'plate_text': 'string - extracted license plate text',
+                    'left_number': 'string - left numeric part of license plate',
+                    'middle_text': 'string - middle text part in Arabic as written ("تونس")',
+                    'right_number': 'string - right numeric part of license plate',
                     'model': 'string - OpenAI model used',
                     'usage': 'object - API usage statistics'
                 }
